@@ -87,6 +87,26 @@ textarea{min-height:110px;resize:vertical}
 .legend span{display:inline-flex;gap:6px;align-items:center}
 .legend .mark{width:20px;height:20px;font-size:12px;cursor:default}
 footer{color:var(--muted);font-size:12.5px;border-top:1px solid var(--rule);padding-top:10px}
+.sid{font:inherit;font-family:var(--f-data);font-weight:600;color:var(--accent);background:none;border:0;padding:2px 4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.sheet-back{position:fixed;inset:0;background:rgba(10,16,17,.5);display:flex;align-items:center;justify-content:center;z-index:20;
+  padding:calc(12px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+.sheet{background:var(--sheet);color:var(--ink);border:1px solid var(--rule);border-radius:12px;width:100%;max-width:760px;max-height:100%;display:flex;flex-direction:column;overflow:hidden}
+.sheet-h{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:2px solid var(--ink)}
+.sheet-h h2{font-size:20px}
+.sheet-b{overflow-y:auto;padding:4px 16px}
+.sheet-f{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--rule)}
+.srow{display:grid;grid-template-columns:2em minmax(0,1fr) auto;gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid var(--rule)}
+.srow:last-child{border-bottom:0}
+.srow.focus{background:var(--amber-soft);margin-inline:-16px;padding-inline:16px}
+.srow .no{font-family:var(--f-data);color:var(--muted);padding-top:2px}
+.srow .qtext{font-size:14px;margin-bottom:6px}
+.pair{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13.5px}
+.pair .lbl{color:var(--muted)}
+.pair .val{font-family:var(--f-data);direction:ltr;unicode-bidi:isolate;font-weight:500}
+.pair .val.w{color:var(--pen)} .pair .val.c{color:var(--tick)} .pair .val.r{color:var(--amber)}
+.sact{display:flex;flex-direction:column;align-items:center;gap:6px}
+.sact .row{gap:4px;flex-wrap:nowrap}
+tr.hl td{background:var(--amber-soft)}
 @media (max-width:760px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:1fr}h1{font-size:25px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -155,7 +175,7 @@ footer{color:var(--muted);font-size:12.5px;border-top:1px solid var(--rule);padd
       <div class="card panel">
         <div class="row" style="justify-content:space-between"><h2>درجات الطلبة</h2><button class="btn ghost sm" id="copyCsv">نسخ النتائج لـ Excel</button></div>
         <div class="legend"><span><i class="mark m-c">✓</i>صحيحة</span><span><i class="mark m-w">✗</i>خاطئة</span><span><i class="mark m-r">؟</i>تحتاج مراجعة</span><span><i class="mark m-b">–</i>لم يُجب</span></div>
-        <p class="hint">اضغط على أي علامة لتغيير الحكم يدوياً؛ قرارك هو النهائي.</p>
+        <p class="hint">اضغط على رقم الطالب لفتح ورقته كاملة، أو على أي علامة لترى إجابته على ذلك السؤال. ومن الورقة تستطيع تغيير الحكم؛ قرارك هو النهائي.</p>
         <div class="scroll"><table id="resTable"><thead></thead><tbody></tbody></table></div>
       </div>
       <div class="card panel">
@@ -186,6 +206,19 @@ footer{color:var(--muted);font-size:12.5px;border-top:1px solid var(--rule);padd
     <span class="row"><button class="btn ghost sm" id="reset">استعادة البيانات التجريبية</button><button class="btn no sm" id="resetYes" hidden>تأكيد: مسح بياناتي</button><button class="btn ghost sm" id="clearAll">بدء ورقة جديدة فارغة</button><button class="btn no sm" id="clearYes" hidden>تأكيد: بدء ورقة فارغة</button></span>
   </div>
   <footer>نموذج أولي للتجربة والنقاش، وليس نظاماً معتمداً من أي جهة تعليمية. يدعم حالياً أسئلة الاختيار والصح والخطأ والإكمال؛ وتصحيح الأوراق المصوّرة والكتابة الحرة مرحلة لاحقة في خطة المشروع.</footer>
+</div>
+<div class="sheet-back" id="sheetBack" dir="rtl" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-h">
+      <div><h2 id="sheetTitle">ورقة الطالب</h2><span class="hint" id="sheetSub"></span></div>
+      <div class="row"><span class="pill" id="sheetScore"></span><button class="x" id="sheetClose" aria-label="إغلاق" style="font-size:24px">×</button></div>
+    </div>
+    <div class="sheet-b" id="sheetBody"></div>
+    <div class="sheet-f">
+      <div class="row"><button class="btn ghost sm" id="sheetPrev">→ الطالب السابق</button><button class="btn ghost sm" id="sheetNext">الطالب التالي ←</button></div>
+      <button class="btn sm" id="sheetEdit">تعديل إجابات هذا الطالب</button>
+    </div>
+  </div>
 </div>
 <div class="toast" id="toast" hidden></div>
 
@@ -281,7 +314,7 @@ function renderRes(R){
   $('#resTable thead').innerHTML=`<tr><th>الطالب</th>${st.questions.map((q,i)=>`<th class="num">${i+1}</th>`).join('')}<th class="num">الدرجة</th><th class="num">%</th></tr>`;
   $('#resTable tbody').innerHTML=R.rows.map(r=>{
     const p=Math.round(r.pct*100),cls=p>=80?'p-hi':p>=60?'p-mid':'p-lo';
-    return `<tr><td style="font-family:var(--f-data)">${esc(r.s.id)}</td>${r.cells.map((c,qi)=>`<td class="num"><button class="mark m-${c.v}" data-tog="${r.si}|${qi}" title="${esc(r.s.answers[qi]||'(فارغ)')}${c.manual?' — عُدّلت يدوياً':''}" aria-label="${esc(r.s.id)} سؤال ${qi+1}: ${esc(r.s.answers[qi]||'فارغ')}">${SYM[c.v]}${c.manual?'<sup style="font-size:8px">•</sup>':''}</button></td>`).join('')}
+    return `<tr><td><button class="sid" data-open="${r.si}" aria-label="فتح ورقة الطالب ${esc(r.s.id)}">${esc(r.s.id)}</button></td>${r.cells.map((c,qi)=>`<td class="num"><button class="mark m-${c.v}" data-open="${r.si}|${qi}" title="${esc(r.s.answers[qi]||'(فارغ)')}${c.manual?' — عُدّلت يدوياً':''}" aria-label="${esc(r.s.id)} سؤال ${qi+1}: ${esc(r.s.answers[qi]||'فارغ')}">${SYM[c.v]}${c.manual?'<sup style="font-size:8px">•</sup>':''}</button></td>`).join('')}
       <td class="num">${r.score}/${R.total}</td><td class="num"><span class="pill ${cls}">${p}%</span></td></tr>`}).join('');
   $('#bars').innerHTML=R.items.map(it=>{const p=Math.round(it.pct*100);return `<div class="bar${p<60?' low':''}"><span class="q">س${it.qi+1}</span><span class="track"><span class="fill" style="width:${p}%;display:block"></span></span><span class="v">${p}%</span></div>`}).join('');
   const worst=R.items.slice().sort((a,b)=>a.pct-b.pct)[0];
@@ -296,7 +329,7 @@ function renderRes(R){
 function renderRev(){
   const items=[];
   st.students.forEach((s,si)=>st.questions.forEach((q,qi)=>{const c=cell(si,qi);if(c.v==='r')items.push({s,si,q,qi})}));
-  $('#revList').innerHTML=items.length?items.map(it=>`<div class="rv"><div>الطالب <b style="font-family:var(--f-data)">${esc(it.s.id)}</b> — سؤال ${it.qi+1}: كتب <code>${esc(it.s.answers[it.qi])}</code><br><span class="hint">المقبول: <span class="qtext">${esc(it.q.key)}</span></span></div>
+  $('#revList').innerHTML=items.length?items.map(it=>`<div class="rv"><div>الطالب <button class="sid" data-openrev="${it.si}|${it.qi}" aria-label="فتح ورقة الطالب ${esc(it.s.id)}">${esc(it.s.id)}</button> — سؤال ${it.qi+1}: كتب <code>${esc(it.s.answers[it.qi])}</code><br><span class="hint">المقبول: <span class="qtext">${esc(it.q.key)}</span></span></div>
     <div class="row"><button class="btn ok sm" data-set="${it.si}|${it.qi}|c">صحيحة</button><button class="btn no sm" data-set="${it.si}|${it.qi}|w">خاطئة</button></div></div>`).join('')
     :`<p class="hint" style="padding:12px 0">لا توجد إجابات معلّقة. كل الأوراق مصححة.</p>`;
 }
@@ -341,7 +374,42 @@ $('#doImport').onclick=()=>{
   edited();refresh(true);$('#importMsg').textContent=lines.length?`أُضيف ${add} طالب، وحُدّثت إجابات ${upd}.`:'لم يُعثر على أسطر للاستيراد.';
 };
 function setOverride(si,qi,v){const s=st.students[si];const k=s.id+'|'+qi;if(v===auto(st.questions[qi],s.answers[qi])&&v!=='r')delete st.overrides[k];else st.overrides[k]=v;edited();refresh(false)}
-$('#resTable').addEventListener('click',e=>{const b=e.target.closest('[data-tog]');if(!b)return;const [si,qi]=b.dataset.tog.split('|').map(Number);const c=cell(si,qi);setOverride(si,qi,c.v==='c'?'w':'c')});
+$('#resTable').addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(!b)return;const [si,qi]=b.dataset.open.split('|');openSheet(+si,qi==null?null:+qi,b)});
+$('#revList').addEventListener('click',e=>{const b=e.target.closest('[data-openrev]');if(!b)return;const [si,qi]=b.dataset.openrev.split('|');openSheet(+si,+qi,b)});
+
+/* ---------- student sheet ---------- */
+let sheetSi=null,sheetFocus=null,sheetOpener=null;
+const VERD={c:'صحيحة',w:'خاطئة',r:'تحتاج مراجعة',b:'لم يُجب'};
+function openSheet(si,qi,opener){sheetSi=si;sheetFocus=qi;sheetOpener=opener||null;$('#sheetBack').hidden=false;renderSheet(true);$('#sheetClose').focus()}
+function closeSheet(){$('#sheetBack').hidden=true;sheetSi=null;if(sheetOpener&&document.body.contains(sheetOpener))sheetOpener.focus()}
+function renderSheet(scroll){
+  if(sheetSi==null)return;
+  if(sheetSi>=st.students.length){closeSheet();return}
+  const R=results(),r=R.rows[sheetSi],s=r.s,p=Math.round(r.pct*100);
+  $('#sheetTitle').textContent='ورقة الطالب '+s.id;
+  $('#sheetSub').textContent=(st.title||'')+(r.review?` — ${r.review} إجابة تحتاج مراجعة`:'');
+  const sc=$('#sheetScore');sc.textContent=`${r.score}/${R.total} · ${p}%`;sc.className='pill '+(p>=80?'p-hi':p>=60?'p-mid':'p-lo');
+  $('#sheetBody').innerHTML=st.questions.map((q,qi)=>{const c=r.cells[qi],a=s.answers[qi];
+    return `<div class="srow${qi===sheetFocus?' focus':''}" id="sr${qi}">
+      <span class="no">${qi+1}</span>
+      <div style="min-width:0"><div class="qtext">${esc(q.text)||'<span class="hint">(بلا نص)</span>'}</div>
+        <div class="pair"><span><span class="lbl">إجابة الطالب: </span><span class="val ${c.v}">${a?esc(a):'—'}</span></span>
+        <span><span class="lbl">الإجابة الصحيحة: </span><span class="val">${esc(q.key)}</span></span>
+        <span class="lbl">${VERD[c.v]}${c.manual?' (عدّلتها يدوياً)':''} · ${c.v==='c'?(+q.marks||0):0} من ${+q.marks||0}</span></div></div>
+      <div class="sact"><span class="mark m-${c.v}" style="cursor:default">${SYM[c.v]}</span>${c.v==='b'?'':`<div class="row"><button class="btn ok sm" data-sset="${qi}|c" aria-label="اعتماد إجابة السؤال ${qi+1} صحيحة">✓</button><button class="btn no sm" data-sset="${qi}|w" aria-label="اعتماد إجابة السؤال ${qi+1} خاطئة">✗</button></div>`}</div>
+    </div>`}).join('');
+  $('#sheetPrev').disabled=sheetSi<=0;$('#sheetNext').disabled=sheetSi>=st.students.length-1;
+  if(scroll&&sheetFocus!=null){const el=$('#sr'+sheetFocus);el&&el.scrollIntoView({block:'center'})}else if(scroll)$('#sheetBody').scrollTop=0;
+}
+$('#sheetBody').addEventListener('click',e=>{const b=e.target.closest('[data-sset]');if(!b)return;const [qi,v]=b.dataset.sset.split('|');sheetFocus=+qi;setOverride(sheetSi,+qi,v);renderSheet(false);toast(v==='c'?'اعتُمدت صحيحة':'اعتُمدت خاطئة')});
+$('#sheetClose').onclick=closeSheet;
+$('#sheetBack').addEventListener('click',e=>{if(e.target.id==='sheetBack')closeSheet()});
+document.addEventListener('keydown',e=>{if($('#sheetBack').hidden)return;if(e.key==='Escape')closeSheet()});
+$('#sheetPrev').onclick=()=>{if(sheetSi>0){sheetSi--;sheetFocus=null;renderSheet(true)}};
+$('#sheetNext').onclick=()=>{if(sheetSi<st.students.length-1){sheetSi++;sheetFocus=null;renderSheet(true)}};
+$('#sheetEdit').onclick=()=>{const si=sheetSi,qi=sheetFocus??0;closeSheet();show('ans');
+  document.querySelectorAll('#ansTable tr.hl').forEach(t=>t.classList.remove('hl'));
+  const inp=$('#a'+si+'_'+qi);if(inp){inp.closest('tr').classList.add('hl');inp.scrollIntoView({block:'center'});inp.focus();inp.select()}};
 $('#revList').addEventListener('click',e=>{const b=e.target.closest('[data-set]');if(!b)return;const [si,qi,v]=b.dataset.set.split('|');setOverride(+si,+qi,v);toast(v==='c'?'اعتُمدت صحيحة':'اعتُمدت خاطئة')});
 $('#mins').oninput=e=>{st.mins=+e.target.value||0;renderStats(results());save()};
 $('#copyCsv').onclick=()=>{
