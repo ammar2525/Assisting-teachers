@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>مُصحِّح</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Readex+Pro:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: ledger-style tool — summary strip, then tabbed workbench (key → answers → results → review) */
+:root{
+  --paper:#F6F7F3; --sheet:#FFFFFF; --ink:#1D2A2C; --muted:#5E6B6A; --rule:#DCE0D8;
+  --tick:#1F6F5C; --tick-soft:#E2F0EA; --pen:#B8352A; --pen-soft:#F8E4E1; --amber:#A86A12; --amber-soft:#FBF0DC;
+  --accent:#1F6F5C;
+  --f-display:"Readex Pro","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans Arabic",system-ui,"Segoe UI",Tahoma,sans-serif;
+  --f-data:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#141B1C; --sheet:#1B2425; --ink:#E6ECE9; --muted:#9AA8A5; --rule:#2E3A3B;
+  --tick:#5FC2A2; --tick-soft:#1C3530; --pen:#F07A6C; --pen-soft:#3B2220; --amber:#E7B25A; --amber-soft:#3A2E18; --accent:#5FC2A2; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#141B1C; --sheet:#1B2425; --ink:#E6ECE9; --muted:#9AA8A5; --rule:#2E3A3B;
+  --tick:#5FC2A2; --tick-soft:#1C3530; --pen:#F07A6C; --pen-soft:#3B2220; --amber:#E7B25A; --amber-soft:#3A2E18; --accent:#5FC2A2; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1080px;margin-inline:auto;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:2px solid var(--ink);padding-bottom:12px}
+h1{font-family:var(--f-display);font-size:30px;margin:0;line-height:1.2}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);margin:2px 0 0;font-size:14px}
+.badge{font-size:12px;border:1px dashed var(--amber);color:var(--amber);padding:3px 10px;border-radius:99px;white-space:nowrap}
+h2{font-family:var(--f-display);font-size:19px;margin:0;text-wrap:balance}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.stat{background:var(--sheet);padding:12px 14px;min-width:0}
+.stat b{display:block;font-family:var(--f-data);font-size:24px;font-weight:500;font-variant-numeric:tabular-nums}
+.stat small{color:var(--muted);font-size:12.5px}
+.stat.rev b{color:var(--amber)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--rule)}
+.tab{font:inherit;font-weight:600;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);padding:8px 14px;cursor:pointer}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab .n{font-family:var(--f-data);font-size:12px;background:var(--amber-soft);color:var(--amber);border-radius:99px;padding:0 7px;margin-inline-start:6px}
+.tab:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.panel{display:flex;flex-direction:column;gap:14px}
+.hint{color:var(--muted);font-size:13.5px;margin:0;max-width:70ch}
+.card{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;padding:16px;min-width:0}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border-bottom:1px solid var(--rule);padding:6px 8px;text-align:start;vertical-align:middle}
+th{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+td.num,th.num{font-family:var(--f-data);font-variant-numeric:tabular-nums;text-align:center}
+input[type=text],input[type=number],select,textarea{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:5px 8px;width:100%;min-width:0}
+input.ans{font-family:var(--f-data);font-size:13px;width:7.5em;text-align:center;direction:ltr}
+input.ltr,textarea.ltr{direction:ltr;text-align:left;font-family:var(--f-data);font-size:13px}
+textarea{min-height:110px;resize:vertical}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;padding:7px 14px;cursor:pointer;border:1px solid var(--ink);background:var(--ink);color:var(--paper)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+.btn.sm{padding:3px 10px;font-size:13px}
+.btn.ok{background:var(--tick);border-color:var(--tick);color:var(--sheet)}
+.btn.no{background:var(--pen);border-color:var(--pen);color:var(--sheet)}
+.x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:2px 6px}
+.x:hover{color:var(--pen)}
+.mark{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;font-weight:700;font-family:var(--f-data);border:0;cursor:pointer}
+.m-c{background:var(--tick-soft);color:var(--tick)}
+.m-w{background:var(--pen-soft);color:var(--pen)}
+.m-r{background:var(--amber-soft);color:var(--amber);outline:1px dashed var(--amber)}
+.m-b{background:transparent;color:var(--muted);border:1px solid var(--rule)}
+.pill{display:inline-block;font-size:12px;padding:1px 9px;border-radius:99px;font-weight:600;white-space:nowrap}
+.p-hi{background:var(--tick-soft);color:var(--tick)} .p-mid{background:var(--amber-soft);color:var(--amber)} .p-lo{background:var(--pen-soft);color:var(--pen)}
+.bars{display:flex;flex-direction:column;gap:8px}
+.bar{display:grid;grid-template-columns:3.2em minmax(0,1fr) 3.5em;gap:10px;align-items:center;font-size:13.5px}
+.bar .track{height:14px;background:var(--paper);border:1px solid var(--rule);border-radius:4px;overflow:hidden}
+.bar .fill{height:100%;background:var(--tick)}
+.bar.low .fill{background:var(--pen)}
+.bar .q{font-family:var(--f-data)} .bar .v{font-family:var(--f-data);font-variant-numeric:tabular-nums;text-align:end}
+.callout{border-inline-start:3px solid var(--pen);background:var(--pen-soft);padding:10px 14px;border-radius:6px;font-size:14px}
+.callout.good{border-color:var(--tick);background:var(--tick-soft)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px}
+.rv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--rule)}
+.rv:last-child{border-bottom:0}
+.rv code{font-family:var(--f-data);background:var(--amber-soft);color:var(--amber);padding:1px 6px;border-radius:4px;direction:ltr;unicode-bidi:isolate}
+.qtext{direction:ltr;text-align:left;unicode-bidi:plaintext}
+.toast{position:fixed;inset-inline:0;bottom:calc(16px + env(safe-area-inset-bottom,0px));margin-inline:auto;width:max-content;max-width:90vw;background:var(--ink);color:var(--paper);padding:8px 16px;border-radius:8px;font-size:14px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.legend .mark{width:20px;height:20px;font-size:12px;cursor:default}
+footer{color:var(--muted);font-size:12.5px;border-top:1px solid var(--rule);padding-top:10px}
+@media (max-width:760px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:1fr}h1{font-size:25px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap" dir="rtl">
+  <header>
+    <div>
+      <h1>مُصحِّ<span>ح</span></h1>
+      <p class="sub">نموذج أولي لتصحيح أوراق العمل اليومية آلياً — ضمن مشروع «إنصاف المعلم استثمار في مستقبل الأجيال»</p>
+    </div>
+    <span class="badge" id="sampleBadge">البيانات المعروضة تجريبية للتوضيح</span>
+  </header>
+
+  <section class="stats" aria-label="ملخص">
+    <div class="stat"><b id="sPapers">0</b><small>ورقة مصححة</small></div>
+    <div class="stat"><b id="sAvg">0%</b><small>متوسط الصف</small></div>
+    <div class="stat rev"><b id="sReview">0</b><small>إجابة تحتاج مراجعتك</small></div>
+    <div class="stat"><b id="sSaved">0</b><small id="sSavedLbl">ساعة تصحيح يدوي تقديرية</small></div>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" id="t-key" data-tab="key">١. الورقة ومفتاح الإجابة</button>
+    <button class="tab" role="tab" id="t-ans" data-tab="ans">٢. إجابات الطلبة</button>
+    <button class="tab" role="tab" id="t-res" data-tab="res">٣. النتائج</button>
+    <button class="tab" role="tab" id="t-rev" data-tab="rev">٤. المراجعة <span class="n" id="revCount">0</span></button>
+  </nav>
+
+  <!-- KEY -->
+  <section class="panel" id="p-key" role="tabpanel">
+    <div class="card panel">
+      <div class="row">
+        <label for="wsTitle" style="font-weight:600">عنوان الورقة</label>
+        <input type="text" id="wsTitle" class="ltr" style="max-width:420px">
+      </div>
+      <p class="hint">أدخل مفتاح الإجابة مرة واحدة. في أسئلة الاختيار اكتب الحرف (a, b, c, d أو أ، ب، ج، د). في الصح والخطأ اكتب T أو F. في أسئلة الإكمال اكتب كل الإجابات المقبولة مفصولة بشرطة مائلة، مثل <span class="qtext">colour / color</span>.</p>
+      <div class="scroll"><table id="keyTable">
+        <thead><tr><th class="num">رقم</th><th>نص السؤال</th><th>النوع</th><th>الإجابة الصحيحة</th><th class="num">الدرجة</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="row"><button class="btn ghost" id="addQ">+ إضافة سؤال</button></div>
+    </div>
+  </section>
+
+  <!-- ANSWERS -->
+  <section class="panel" id="p-ans" role="tabpanel" hidden>
+    <div class="card panel">
+      <h2>جدول الإجابات</h2>
+      <p class="hint">كل سطر طالب، وكل عمود سؤال. يُكتفى برقم الطالب حفاظاً على الخصوصية. اترك الخانة فارغة إذا لم يُجب الطالب.</p>
+      <div class="scroll"><table id="ansTable"><thead></thead><tbody></tbody></table></div>
+      <div class="row"><button class="btn ghost" id="addS">+ إضافة طالب</button></div>
+    </div>
+    <div class="card panel">
+      <h2>استيراد سريع من Excel أو نموذج إلكتروني</h2>
+      <p class="hint">انسخ الأعمدة من Excel أو من نتائج نموذج إلكتروني والصقها هنا: العمود الأول رقم الطالب، ثم إجابة كل سؤال بالترتيب. الاستيراد يضيف الطلبة الجدد ويحدّث الموجودين.</p>
+      <textarea id="paste" class="ltr" placeholder="S26	b	a	T	F	o	grandfather	colour	this is my bag"></textarea>
+      <div class="row"><button class="btn" id="doImport">استيراد الإجابات</button><span class="hint" id="importMsg"></span></div>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section class="panel" id="p-res" role="tabpanel" hidden>
+    <div id="insight"></div>
+    <div class="grid2">
+      <div class="card panel">
+        <div class="row" style="justify-content:space-between"><h2>درجات الطلبة</h2><button class="btn ghost sm" id="copyCsv">نسخ النتائج لـ Excel</button></div>
+        <div class="legend"><span><i class="mark m-c">✓</i>صحيحة</span><span><i class="mark m-w">✗</i>خاطئة</span><span><i class="mark m-r">؟</i>تحتاج مراجعة</span><span><i class="mark m-b">–</i>لم يُجب</span></div>
+        <p class="hint">اضغط على أي علامة لتغيير الحكم يدوياً؛ قرارك هو النهائي.</p>
+        <div class="scroll"><table id="resTable"><thead></thead><tbody></tbody></table></div>
+      </div>
+      <div class="card panel">
+        <h2>تحليل الأسئلة</h2>
+        <p class="hint">نسبة الطلبة الذين أجابوا كل سؤال إجابة صحيحة. السؤال الأحمر أجاب عنه أقل من 60% صحيحاً، وقد يحتاج إلى إعادة شرح.</p>
+        <div class="bars" id="bars"></div>
+        <hr style="border:0;border-top:1px solid var(--rule);width:100%">
+        <div class="panel" style="gap:8px">
+          <label for="mins" style="font-weight:600">زمن تصحيح الورقة يدوياً (بالدقائق)</label>
+          <input type="number" id="mins" min="0.1" step="0.1" style="max-width:120px">
+          <p class="hint">افتراض قابل للتعديل لحساب الوقت الذي كان سيُصرف في تصحيح هذه الأوراق يدوياً. ضع الرقم الذي تقيسه فعلياً.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REVIEW -->
+  <section class="panel" id="p-rev" role="tabpanel" hidden>
+    <div class="card panel">
+      <h2>إجابات تحتاج قرارك</h2>
+      <p class="hint">هذه إجابات قريبة من الإجابة الصحيحة لكنها غير مطابقة تماماً، غالباً خطأ إملائي بسيط. البرنامج لا يحكم فيها، والقرار لك.</p>
+      <div id="revList"></div>
+    </div>
+  </section>
+
+  <div class="row" style="justify-content:space-between">
+    <span class="hint">تُحفظ بياناتك في هذا المتصفح فقط، ولا تُرسل إلى أي جهة.</span>
+    <span class="row"><button class="btn ghost sm" id="reset">استعادة البيانات التجريبية</button><button class="btn no sm" id="resetYes" hidden>تأكيد: مسح بياناتي</button><button class="btn ghost sm" id="clearAll">بدء ورقة جديدة فارغة</button><button class="btn no sm" id="clearYes" hidden>تأكيد: بدء ورقة فارغة</button></span>
+  </div>
+  <footer>نموذج أولي للتجربة والنقاش، وليس نظاماً معتمداً من أي جهة تعليمية. يدعم حالياً أسئلة الاختيار والصح والخطأ والإكمال؛ وتصحيح الأوراق المصوّرة والكتابة الحرة مرحلة لاحقة في خطة المشروع.</footer>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+const STORE='musahhih-v1';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const TYPES={mcq:'اختيار من متعدد',tf:'صح وخطأ',fill:'إكمال / كتابة'};
+
+function sample(){
+  const qs=[
+    {text:'She ___ my sister.  (a) am  (b) is  (c) are',type:'mcq',key:'b',marks:1},
+    {text:'I have ___ apple.  (a) an  (b) a',type:'mcq',key:'a',marks:1},
+    {text:'My mother is a woman.  (T / F)',type:'tf',key:'T',marks:1},
+    {text:'A baby is older than a grandmother.  (T / F)',type:'tf',key:'F',marks:1},
+    {text:'Write the missing letter:  m _ ther',type:'fill',key:'o',marks:1},
+    {text:'My father’s father is my ________.',type:'fill',key:'grandfather / grandpa',marks:1},
+    {text:'What ______ is your bag? It is red.',type:'fill',key:'colour / color',marks:1},
+    {text:'Order the words:  bag / my / is / This',type:'fill',key:'this is my bag',marks:2}
+  ];
+  // deterministic example answers
+  let s=7;const r=()=>{s=(s*1103515245+12345)%2147483648;return s/2147483648};
+  const wrong=[['a','c','a'],['b','b'],['F'],['T'],['a','e',''],['grandmother','grandfathr','granfather','father'],['colr','color','size','coler'],['my bag is this','this my is bag','this is my bg','']];
+  const students=[];
+  for(let i=1;i<=25;i++){
+    const ability=0.55+r()*0.42;
+    const ans=qs.map((q,j)=>{
+      const keys=q.key.split('/').map(x=>x.trim());
+      if(r()<ability*(j===6?0.75:1)) return q.type==='fill'?keys[Math.floor(r()*keys.length)]:(q.type==='mcq'&&r()<.2?({a:'أ',b:'ب'}[q.key]||q.key):q.key);
+      const w=wrong[j];return w[Math.floor(r()*w.length)];
+    });
+    students.push({id:'S'+String(i).padStart(2,'0'),answers:ans});
+  }
+  return {title:'Unit 3 — My Family (Worksheet 4)',questions:qs,students,overrides:{},mins:1,sample:true};
+}
+
+let st;
+try{st=JSON.parse(localStorage.getItem(STORE))}catch(e){st=null}
+if(!st||!Array.isArray(st.questions))st=sample();
+function save(){try{localStorage.setItem(STORE,JSON.stringify(st))}catch(e){}}
+
+/* ---------- grading ---------- */
+const norm=s=>String(s??'').trim().toLowerCase().replace(/[’'".,!?;:]/g,'').replace(/\s+/g,' ');
+const MCQ={'أ':'a','ا':'a','ب':'b','ج':'c','د':'d'};
+function tfNorm(v){v=norm(v);if(['t','true','صح','ص','✓','صحيح'].includes(v))return 't';if(['f','false','خطأ','خ','خطا','✗','x'].includes(v))return 'f';return v}
+function lev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}return p[n]}
+function auto(q,ans){
+  const a=norm(ans);if(!a)return 'b';
+  if(q.type==='mcq'){const v=MCQ[a]||a.replace(/[()]/g,'');const k=MCQ[norm(q.key)]||norm(q.key);return v===k?'c':'w'}
+  if(q.type==='tf')return tfNorm(a)===tfNorm(q.key)?'c':'w';
+  const keys=String(q.key).split('/').map(norm).filter(Boolean);
+  if(keys.includes(a))return 'c';
+  const d=Math.min(...keys.map(k=>lev(a,k)));
+  const L=Math.max(a.length,...keys.map(k=>k.length));
+  if(L>=3&&(d===1||(d===2&&L>=7)))return 'r';
+  return 'w';
+}
+function cell(si,qi){
+  const s=st.students[si],q=st.questions[qi];
+  const o=st.overrides[s.id+'|'+qi];
+  const a=auto(q,s.answers[qi]);
+  if(o==='c'||o==='w')return {v:o,manual:true,auto:a};
+  return {v:a,manual:false,auto:a};
+}
+function results(){
+  const total=st.questions.reduce((t,q)=>t+(+q.marks||0),0);
+  const rows=st.students.map((s,si)=>{
+    let score=0,review=0;const cells=st.questions.map((q,qi)=>{const c=cell(si,qi);if(c.v==='c')score+=(+q.marks||0);if(c.v==='r')review++;return c});
+    return {s,si,cells,score,review,pct:total?score/total:0};
+  });
+  const items=st.questions.map((q,qi)=>{const n=rows.length;const c=rows.filter(r=>r.cells[qi].v==='c').length;return {qi,pct:n?c/n:0}});
+  return {total,rows,items,reviews:rows.reduce((t,r)=>t+r.review,0)};
+}
+
+/* ---------- render ---------- */
+function renderKey(){
+  $('#wsTitle').value=st.title||'';
+  $('#keyTable tbody').innerHTML=st.questions.map((q,i)=>`<tr>
+    <td class="num">${i+1}</td>
+    <td style="min-width:240px"><input type="text" class="ltr" id="qt${i}" data-i="${i}" data-f="text" value="${esc(q.text)}" aria-label="نص السؤال ${i+1}"></td>
+    <td><select id="qy${i}" data-i="${i}" data-f="type" aria-label="نوع السؤال ${i+1}">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}"${q.type===k?' selected':''}>${v}</option>`).join('')}</select></td>
+    <td style="min-width:150px"><input type="text" class="ltr" id="qk${i}" data-i="${i}" data-f="key" value="${esc(q.key)}" aria-label="الإجابة الصحيحة ${i+1}"></td>
+    <td class="num"><input type="number" id="qm${i}" min="0" step="0.5" data-i="${i}" data-f="marks" value="${esc(q.marks)}" style="width:4.5em;text-align:center" aria-label="درجة السؤال ${i+1}"></td>
+    <td><button class="x" data-delq="${i}" aria-label="حذف السؤال ${i+1}">×</button></td></tr>`).join('');
+}
+function renderAns(){
+  $('#ansTable thead').innerHTML=`<tr><th>رقم الطالب</th>${st.questions.map((q,i)=>`<th class="num" title="${esc(q.text)}">س${i+1}</th>`).join('')}<th></th></tr>`;
+  $('#ansTable tbody').innerHTML=st.students.map((s,si)=>`<tr><td><input type="text" class="ltr" id="sid${si}" data-si="${si}" value="${esc(s.id)}" style="width:6em" aria-label="رقم الطالب"></td>${st.questions.map((q,qi)=>`<td class="num"><input class="ans" type="text" id="a${si}_${qi}" data-si="${si}" data-qi="${qi}" value="${esc(s.answers[qi]??'')}" aria-label="إجابة ${esc(s.id)} على السؤال ${qi+1}"></td>`).join('')}<td><button class="x" data-dels="${si}" aria-label="حذف الطالب">×</button></td></tr>`).join('');
+}
+const SYM={c:'✓',w:'✗',r:'؟',b:'–'};
+function renderRes(R){
+  $('#resTable thead').innerHTML=`<tr><th>الطالب</th>${st.questions.map((q,i)=>`<th class="num">${i+1}</th>`).join('')}<th class="num">الدرجة</th><th class="num">%</th></tr>`;
+  $('#resTable tbody').innerHTML=R.rows.map(r=>{
+    const p=Math.round(r.pct*100),cls=p>=80?'p-hi':p>=60?'p-mid':'p-lo';
+    return `<tr><td style="font-family:var(--f-data)">${esc(r.s.id)}</td>${r.cells.map((c,qi)=>`<td class="num"><button class="mark m-${c.v}" data-tog="${r.si}|${qi}" title="${esc(r.s.answers[qi]||'(فارغ)')}${c.manual?' — عُدّلت يدوياً':''}" aria-label="${esc(r.s.id)} سؤال ${qi+1}: ${esc(r.s.answers[qi]||'فارغ')}">${SYM[c.v]}${c.manual?'<sup style="font-size:8px">•</sup>':''}</button></td>`).join('')}
+      <td class="num">${r.score}/${R.total}</td><td class="num"><span class="pill ${cls}">${p}%</span></td></tr>`}).join('');
+  $('#bars').innerHTML=R.items.map(it=>{const p=Math.round(it.pct*100);return `<div class="bar${p<60?' low':''}"><span class="q">س${it.qi+1}</span><span class="track"><span class="fill" style="width:${p}%;display:block"></span></span><span class="v">${p}%</span></div>`}).join('');
+  const worst=R.items.slice().sort((a,b)=>a.pct-b.pct)[0];
+  if(worst&&R.rows.length){
+    const q=st.questions[worst.qi],p=Math.round(worst.pct*100);
+    $('#insight').innerHTML=p<60
+      ?`<div class="callout"><b>السؤال ${worst.qi+1} هو الأضعف في الصف:</b> أجاب عنه صحيحاً ${p}% فقط من الطلبة — <span class="qtext">${esc(q.text)}</span>. قد يفيد تخصيص بضع دقائق لإعادة شرحه في الحصة القادمة.</div>`
+      :`<div class="callout good">لا يوجد سؤال تقل نسبة الإجابة الصحيحة عليه عن 60%. أضعف سؤال هو رقم ${worst.qi+1} بنسبة ${p}%.</div>`;
+  } else $('#insight').innerHTML='';
+  $('#mins').value=st.mins;
+}
+function renderRev(){
+  const items=[];
+  st.students.forEach((s,si)=>st.questions.forEach((q,qi)=>{const c=cell(si,qi);if(c.v==='r')items.push({s,si,q,qi})}));
+  $('#revList').innerHTML=items.length?items.map(it=>`<div class="rv"><div>الطالب <b style="font-family:var(--f-data)">${esc(it.s.id)}</b> — سؤال ${it.qi+1}: كتب <code>${esc(it.s.answers[it.qi])}</code><br><span class="hint">المقبول: <span class="qtext">${esc(it.q.key)}</span></span></div>
+    <div class="row"><button class="btn ok sm" data-set="${it.si}|${it.qi}|c">صحيحة</button><button class="btn no sm" data-set="${it.si}|${it.qi}|w">خاطئة</button></div></div>`).join('')
+    :`<p class="hint" style="padding:12px 0">لا توجد إجابات معلّقة. كل الأوراق مصححة.</p>`;
+}
+function renderStats(R){
+  const answered=R.rows.filter(r=>r.cells.some(c=>c.v!=='b')).length;
+  $('#sPapers').textContent=answered;
+  const avg=R.rows.length?R.rows.reduce((t,r)=>t+r.pct,0)/R.rows.length:0;
+  $('#sAvg').textContent=Math.round(avg*100)+'%';
+  $('#sReview').textContent=R.reviews;
+  $('#revCount').textContent=R.reviews;
+  const mins=answered*(+st.mins||0);
+  $('#sSaved').textContent=mins>=60?(mins/60).toFixed(1):Math.round(mins);
+  $('#sSavedLbl').textContent=(mins>=60?'ساعة':'دقيقة')+' تصحيح يدوي تقديرية';
+  $('#sampleBadge').hidden=!st.sample;
+}
+function refresh(full){
+  const R=results();renderStats(R);
+  if(full){renderKey();renderAns()}
+  renderRes(R);renderRev();save();
+}
+
+/* ---------- tabs ---------- */
+function show(t){document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));['key','ans','res','rev'].forEach(k=>$('#p-'+k).hidden=k!==t);try{localStorage.setItem(STORE+'-tab',t)}catch(e){}}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>show(b.dataset.tab));
+let t0='res';try{t0=localStorage.getItem(STORE+'-tab')||'res'}catch(e){}
+
+/* ---------- events ---------- */
+function edited(){st.sample=false}
+$('#wsTitle').oninput=e=>{st.title=e.target.value;save()};
+$('#keyTable').addEventListener('input',e=>{const i=e.target.dataset.i,f=e.target.dataset.f;if(i==null)return;st.questions[i][f]=f==='marks'?+e.target.value:e.target.value;edited();refresh(false)});
+$('#keyTable').addEventListener('change',e=>{if(e.target.dataset.f==='type')renderAns()});
+$('#keyTable').addEventListener('click',e=>{const d=e.target.dataset.delq;if(d==null)return;st.questions.splice(+d,1);st.students.forEach(s=>s.answers.splice(+d,1));st.overrides={};edited();refresh(true)});
+$('#addQ').onclick=()=>{st.questions.push({text:'',type:'mcq',key:'',marks:1});st.students.forEach(s=>s.answers.push(''));edited();refresh(true);const el=$('#qt'+(st.questions.length-1));el&&el.focus()};
+$('#ansTable').addEventListener('input',e=>{const t=e.target;if(t.dataset.qi!=null){const s=st.students[t.dataset.si];s.answers[t.dataset.qi]=t.value;delete st.overrides[s.id+'|'+t.dataset.qi]}else if(t.dataset.si!=null){st.students[t.dataset.si].id=t.value}edited();refresh(false)});
+$('#ansTable').addEventListener('click',e=>{const d=e.target.dataset.dels;if(d==null)return;st.students.splice(+d,1);edited();refresh(true)});
+$('#addS').onclick=()=>{const n=st.students.length+1;st.students.push({id:'S'+String(n).padStart(2,'0'),answers:st.questions.map(()=> '')});edited();refresh(true)};
+$('#doImport').onclick=()=>{
+  const lines=$('#paste').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);let add=0,upd=0;
+  lines.forEach(l=>{const parts=(l.includes('\t')?l.split('\t'):l.split(',')).map(x=>x.trim());const id=parts.shift();if(!id)return;
+    const ans=st.questions.map((_,i)=>parts[i]??'');const ex=st.students.find(s=>s.id===id);
+    if(ex){ex.answers=ans;Object.keys(st.overrides).forEach(k=>{if(k.startsWith(id+'|'))delete st.overrides[k]});upd++}else{st.students.push({id,answers:ans});add++}});
+  edited();refresh(true);$('#importMsg').textContent=lines.length?`أُضيف ${add} طالب، وحُدّثت إجابات ${upd}.`:'لم يُعثر على أسطر للاستيراد.';
+};
+function setOverride(si,qi,v){const s=st.students[si];const k=s.id+'|'+qi;if(v===auto(st.questions[qi],s.answers[qi])&&v!=='r')delete st.overrides[k];else st.overrides[k]=v;edited();refresh(false)}
+$('#resTable').addEventListener('click',e=>{const b=e.target.closest('[data-tog]');if(!b)return;const [si,qi]=b.dataset.tog.split('|').map(Number);const c=cell(si,qi);setOverride(si,qi,c.v==='c'?'w':'c')});
+$('#revList').addEventListener('click',e=>{const b=e.target.closest('[data-set]');if(!b)return;const [si,qi,v]=b.dataset.set.split('|');setOverride(+si,+qi,v);toast(v==='c'?'اعتُمدت صحيحة':'اعتُمدت خاطئة')});
+$('#mins').oninput=e=>{st.mins=+e.target.value||0;renderStats(results());save()};
+$('#copyCsv').onclick=()=>{
+  const R=results();const head=['Student',...st.questions.map((q,i)=>'Q'+(i+1)),'Score','Total','Percent'];
+  const rows=R.rows.map(r=>[r.s.id,...r.cells.map((c,qi)=>c.v==='c'?(+st.questions[qi].marks||0):c.v==='r'?'?':0),r.score,R.total,Math.round(r.pct*100)]);
+  const txt=[head,...rows].map(r=>r.join('\t')).join('\n');
+  const done=()=>toast('نُسخت النتائج؛ الصقها في Excel');
+  try{navigator.clipboard.writeText(txt).then(done,()=>fallback(txt))}catch(e){fallback(txt)}
+};
+function fallback(txt){const ta=$('#paste');show('ans');ta.value=txt;ta.focus();ta.select();toast('تعذّر النسخ التلقائي؛ النتائج محددة في مربع الاستيراد، انسخها يدوياً')}
+function twoStep(btn,yes,fn){btn.onclick=()=>{yes.hidden=false;btn.hidden=true;setTimeout(()=>{yes.hidden=true;btn.hidden=false},5000)};yes.onclick=()=>{fn();yes.hidden=true;btn.hidden=false}}
+twoStep($('#reset'),$('#resetYes'),()=>{st=sample();refresh(true);toast('عادت البيانات التجريبية')});
+twoStep($('#clearAll'),$('#clearYes'),()=>{st={title:'',questions:[{text:'',type:'mcq',key:'',marks:1}],students:[{id:'S01',answers:['']}],overrides:{},mins:st.mins||1,sample:false};refresh(true);show('key');toast('ورقة جديدة جاهزة')});
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2600)}
+
+refresh(true);show(t0);
+window.__grade={auto,lev};
+})();
+</script>
+
+</body>
+</html>
